@@ -36,6 +36,8 @@ from ._types import (
     CertTypes,
     CookieTypes,
     HeaderTypes,
+    JsonDeserializer,
+    JsonSerializer,
     ProxyTypes,
     QueryParamTypes,
     RequestContent,
@@ -190,6 +192,8 @@ class BaseClient:
         base_url: URL | str = "",
         trust_env: bool = True,
         default_encoding: str | typing.Callable[[bytes], str | None] = "utf-8",
+        json_serializer: JsonSerializer | None = None,
+        json_deserializer: JsonDeserializer | None = None,
     ) -> None:
         event_hooks = {} if event_hooks is None else event_hooks
 
@@ -208,6 +212,8 @@ class BaseClient:
         }
         self._trust_env = trust_env
         self._default_encoding = default_encoding
+        self._json_serializer = json_serializer
+        self._json_deserializer = json_deserializer
         self._state = ClientState.UNOPENED
 
     @property
@@ -331,6 +337,8 @@ class BaseClient:
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -353,6 +361,8 @@ class BaseClient:
         cookies = self._merge_cookies(cookies)
         params = self._merge_queryparams(params)
         extensions = {} if extensions is None else extensions
+        if not isinstance(json_deserializer, UseClientDefault):
+            extensions = dict(**extensions, json_deserializer=json_deserializer)
         if "timeout" not in extensions:
             timeout = self.timeout if isinstance(timeout, UseClientDefault) else Timeout(timeout)
             extensions = dict(**extensions, timeout=timeout.as_dict())
@@ -363,6 +373,7 @@ class BaseClient:
             data=data,
             files=files,
             json=json,
+            json_serializer=self._json_serializer if isinstance(json_serializer, UseClientDefault) else json_serializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -629,6 +640,8 @@ class Client(BaseClient):
         base_url: URL | str = "",
         transport: BaseTransport | None = None,
         default_encoding: str | typing.Callable[[bytes], str | None] = "utf-8",
+        json_serializer: JsonSerializer | None = None,
+        json_deserializer: JsonDeserializer | None = None,
     ) -> None:
         super().__init__(
             auth=auth,
@@ -642,6 +655,8 @@ class Client(BaseClient):
             base_url=base_url,
             trust_env=trust_env,
             default_encoding=default_encoding,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
         )
 
         if http2:
@@ -746,6 +761,8 @@ class Client(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -785,6 +802,8 @@ class Client(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -803,6 +822,8 @@ class Client(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -828,6 +849,8 @@ class Client(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -980,6 +1003,7 @@ class Client(BaseClient):
         response.stream = BoundSyncStream(response.stream, response=response, start=start)
         self.cookies.extract_cookies(response)
         response.default_encoding = self._default_encoding
+        response._json_deserializer = request.extensions.get("json_deserializer", self._json_deserializer)
 
         logger.info(
             'HTTP Request: %s %s "%s %d %s"',
@@ -1002,6 +1026,7 @@ class Client(BaseClient):
         auth: AuthTypes | UseClientDefault | None = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1018,6 +1043,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 
@@ -1031,6 +1057,7 @@ class Client(BaseClient):
         auth: AuthTypes | UseClientDefault = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1047,6 +1074,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 
@@ -1060,6 +1088,7 @@ class Client(BaseClient):
         auth: AuthTypes | UseClientDefault = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1076,6 +1105,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 
@@ -1087,6 +1117,8 @@ class Client(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1107,6 +1139,8 @@ class Client(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1124,6 +1158,8 @@ class Client(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1144,6 +1180,8 @@ class Client(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1161,6 +1199,8 @@ class Client(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1181,6 +1221,8 @@ class Client(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1200,6 +1242,7 @@ class Client(BaseClient):
         auth: AuthTypes | UseClientDefault = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1216,6 +1259,7 @@ class Client(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 
@@ -1331,6 +1375,8 @@ class AsyncClient(BaseClient):
         transport: AsyncBaseTransport | None = None,
         trust_env: bool = True,
         default_encoding: str | typing.Callable[[bytes], str | None] = "utf-8",
+        json_serializer: JsonSerializer | None = None,
+        json_deserializer: JsonDeserializer | None = None,
     ) -> None:
         super().__init__(
             auth=auth,
@@ -1344,6 +1390,8 @@ class AsyncClient(BaseClient):
             base_url=base_url,
             trust_env=trust_env,
             default_encoding=default_encoding,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
         )
 
         if http2:
@@ -1448,6 +1496,8 @@ class AsyncClient(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1488,6 +1538,8 @@ class AsyncClient(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1506,6 +1558,8 @@ class AsyncClient(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1531,6 +1585,8 @@ class AsyncClient(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1683,6 +1739,7 @@ class AsyncClient(BaseClient):
         response.stream = BoundAsyncStream(response.stream, response=response, start=start)
         self.cookies.extract_cookies(response)
         response.default_encoding = self._default_encoding
+        response._json_deserializer = request.extensions.get("json_deserializer", self._json_deserializer)
 
         logger.info(
             'HTTP Request: %s %s "%s %d %s"',
@@ -1705,6 +1762,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes | UseClientDefault | None = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1721,6 +1779,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 
@@ -1734,6 +1793,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes | UseClientDefault = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1750,6 +1810,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 
@@ -1763,6 +1824,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes | UseClientDefault = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1779,6 +1841,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 
@@ -1790,6 +1853,8 @@ class AsyncClient(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1810,6 +1875,8 @@ class AsyncClient(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1827,6 +1894,8 @@ class AsyncClient(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1847,6 +1916,8 @@ class AsyncClient(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1864,6 +1935,8 @@ class AsyncClient(BaseClient):
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         params: QueryParamTypes | None = None,
         headers: HeaderTypes | None = None,
         cookies: CookieTypes | None = None,
@@ -1884,6 +1957,8 @@ class AsyncClient(BaseClient):
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             cookies=cookies,
@@ -1903,6 +1978,7 @@ class AsyncClient(BaseClient):
         auth: AuthTypes | UseClientDefault = USE_CLIENT_DEFAULT,
         follow_redirects: bool | UseClientDefault = USE_CLIENT_DEFAULT,
         timeout: TimeoutTypes | UseClientDefault = USE_CLIENT_DEFAULT,
+        json_deserializer: JsonDeserializer | UseClientDefault | None = USE_CLIENT_DEFAULT,
         extensions: RequestExtensions | None = None,
     ) -> Response:
         """
@@ -1919,6 +1995,7 @@ class AsyncClient(BaseClient):
             auth=auth,
             follow_redirects=follow_redirects,
             timeout=timeout,
+            json_deserializer=json_deserializer,
             extensions=extensions,
         )
 

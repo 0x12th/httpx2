@@ -10,6 +10,8 @@ from ._types import (
     AuthTypes,
     CookieTypes,
     HeaderTypes,
+    JsonDeserializer,
+    JsonSerializer,
     ProxyTypes,
     QueryParamTypes,
     RequestContent,
@@ -45,6 +47,8 @@ def request(
     data: RequestData | None = None,
     files: RequestFiles | None = None,
     json: typing.Any | None = None,
+    json_serializer: JsonSerializer | None = None,
+    json_deserializer: JsonDeserializer | None = None,
     headers: HeaderTypes | None = None,
     cookies: CookieTypes | None = None,
     auth: AuthTypes | None = None,
@@ -105,6 +109,7 @@ def request(
         verify=verify,
         timeout=timeout,
         trust_env=trust_env,
+        json_deserializer=json_deserializer,
     ) as client:
         return client.request(
             method=method,
@@ -113,6 +118,8 @@ def request(
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             auth=auth,
@@ -130,6 +137,8 @@ def stream(
     data: RequestData | None = None,
     files: RequestFiles | None = None,
     json: typing.Any | None = None,
+    json_serializer: JsonSerializer | None = None,
+    json_deserializer: JsonDeserializer | None = None,
     headers: HeaderTypes | None = None,
     cookies: CookieTypes | None = None,
     auth: AuthTypes | None = None,
@@ -155,6 +164,7 @@ def stream(
         verify=verify,
         timeout=timeout,
         trust_env=trust_env,
+        json_deserializer=json_deserializer,
     ) as client:
         with client.stream(
             method=method,
@@ -163,6 +173,8 @@ def stream(
             data=data,
             files=files,
             json=json,
+            json_serializer=json_serializer,
+            json_deserializer=json_deserializer,
             params=params,
             headers=headers,
             auth=auth,
@@ -182,6 +194,7 @@ def get(
     follow_redirects: bool = False,
     verify: ssl.SSLContext | str | bool = True,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT_CONFIG,
+    json_deserializer: JsonDeserializer | None = None,
     trust_env: bool = True,
 ) -> Response:
     """
@@ -203,6 +216,7 @@ def get(
         follow_redirects=follow_redirects,
         verify=verify,
         timeout=timeout,
+        json_deserializer=json_deserializer,
         trust_env=trust_env,
     )
 
@@ -218,6 +232,7 @@ def options(
     follow_redirects: bool = False,
     verify: ssl.SSLContext | str | bool = True,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT_CONFIG,
+    json_deserializer: JsonDeserializer | None = None,
     trust_env: bool = True,
 ) -> Response:
     """
@@ -239,6 +254,7 @@ def options(
         follow_redirects=follow_redirects,
         verify=verify,
         timeout=timeout,
+        json_deserializer=json_deserializer,
         trust_env=trust_env,
     )
 
@@ -254,6 +270,7 @@ def head(
     follow_redirects: bool = False,
     verify: ssl.SSLContext | str | bool = True,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT_CONFIG,
+    json_deserializer: JsonDeserializer | None = None,
     trust_env: bool = True,
 ) -> Response:
     """
@@ -275,6 +292,7 @@ def head(
         follow_redirects=follow_redirects,
         verify=verify,
         timeout=timeout,
+        json_deserializer=json_deserializer,
         trust_env=trust_env,
     )
 
@@ -286,6 +304,7 @@ def post(
     data: RequestData | None = None,
     files: RequestFiles | None = None,
     json: typing.Any | None = None,
+    json_serializer: JsonSerializer | None = None,
     params: QueryParamTypes | None = None,
     headers: HeaderTypes | None = None,
     cookies: CookieTypes | None = None,
@@ -294,6 +313,7 @@ def post(
     follow_redirects: bool = False,
     verify: ssl.SSLContext | str | bool = True,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT_CONFIG,
+    json_deserializer: JsonDeserializer | None = None,
     trust_env: bool = True,
 ) -> Response:
     """
@@ -308,6 +328,7 @@ def post(
         data=data,
         files=files,
         json=json,
+        json_serializer=json_serializer,
         params=params,
         headers=headers,
         cookies=cookies,
@@ -316,6 +337,7 @@ def post(
         follow_redirects=follow_redirects,
         verify=verify,
         timeout=timeout,
+        json_deserializer=json_deserializer,
         trust_env=trust_env,
     )
 
@@ -327,6 +349,7 @@ def put(
     data: RequestData | None = None,
     files: RequestFiles | None = None,
     json: typing.Any | None = None,
+    json_serializer: JsonSerializer | None = None,
     params: QueryParamTypes | None = None,
     headers: HeaderTypes | None = None,
     cookies: CookieTypes | None = None,
@@ -335,6 +358,7 @@ def put(
     follow_redirects: bool = False,
     verify: ssl.SSLContext | str | bool = True,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT_CONFIG,
+    json_deserializer: JsonDeserializer | None = None,
     trust_env: bool = True,
 ) -> Response:
     """
@@ -349,6 +373,7 @@ def put(
         data=data,
         files=files,
         json=json,
+        json_serializer=json_serializer,
         params=params,
         headers=headers,
         cookies=cookies,
@@ -357,6 +382,7 @@ def put(
         follow_redirects=follow_redirects,
         verify=verify,
         timeout=timeout,
+        json_deserializer=json_deserializer,
         trust_env=trust_env,
     )
 
@@ -368,6 +394,7 @@ def patch(
     data: RequestData | None = None,
     files: RequestFiles | None = None,
     json: typing.Any | None = None,
+    json_serializer: JsonSerializer | None = None,
     params: QueryParamTypes | None = None,
     headers: HeaderTypes | None = None,
     cookies: CookieTypes | None = None,
@@ -376,6 +403,7 @@ def patch(
     follow_redirects: bool = False,
     verify: ssl.SSLContext | str | bool = True,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT_CONFIG,
+    json_deserializer: JsonDeserializer | None = None,
     trust_env: bool = True,
 ) -> Response:
     """
@@ -390,6 +418,7 @@ def patch(
         data=data,
         files=files,
         json=json,
+        json_serializer=json_serializer,
         params=params,
         headers=headers,
         cookies=cookies,
@@ -398,6 +427,7 @@ def patch(
         follow_redirects=follow_redirects,
         verify=verify,
         timeout=timeout,
+        json_deserializer=json_deserializer,
         trust_env=trust_env,
     )
 
@@ -412,6 +442,7 @@ def delete(
     proxy: ProxyTypes | None = None,
     follow_redirects: bool = False,
     timeout: TimeoutTypes = DEFAULT_TIMEOUT_CONFIG,
+    json_deserializer: JsonDeserializer | None = None,
     verify: ssl.SSLContext | str | bool = True,
     trust_env: bool = True,
 ) -> Response:
@@ -434,5 +465,6 @@ def delete(
         follow_redirects=follow_redirects,
         verify=verify,
         timeout=timeout,
+        json_deserializer=json_deserializer,
         trust_env=trust_env,
     )

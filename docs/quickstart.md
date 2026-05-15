@@ -249,6 +249,17 @@ For more complicated data structures you'll often want to use JSON encoding inst
 }
 ```
 
+The JSON serializer and deserializer can be customized per request or per client.
+The serializer must accept the object passed as `json=...` and return either
+`str` or `bytes`. This allows serializers such as `orjson.dumps` to be used
+directly.
+
+```pycon
+>>> import orjson
+>>> with httpx.Client(json_serializer=orjson.dumps, json_deserializer=orjson.loads) as client:
+...     r = client.post("https://httpbin.org/post", json=data)
+```
+
 ## Sending Binary Request Data
 
 For other encodings, you should use the `content=...` parameter, passing

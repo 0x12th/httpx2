@@ -120,7 +120,7 @@ what gets sent over the wire.*
 >>> response = client.send(request)
 ```
 
-* `def __init__(method, url, [params], [headers], [cookies], [content], [data], [files], [json], [stream])`
+* `def __init__(method, url, [params], [headers], [cookies], [content], [data], [files], [json], [json_serializer], [json_deserializer], [stream])`
 * `.method` - **str**
 * `.url` - **URL**
 * `.content` - **byte**, **byte iterator**, or **byte async iterator**

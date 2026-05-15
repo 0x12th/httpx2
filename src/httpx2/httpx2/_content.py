@@ -17,6 +17,7 @@ from ._exceptions import StreamClosed, StreamConsumed
 from ._multipart import MultipartStream
 from ._types import (
     AsyncByteStream,
+    JsonSerializer,
     RequestContent,
     RequestData,
     RequestFiles,
@@ -26,6 +27,10 @@ from ._types import (
 from ._utils import peek_filelike_length, primitive_value_to_str
 
 __all__ = ["ByteStream"]
+
+
+def default_json_serializer(json: Any) -> str:
+    return json_dumps(json, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
 
 
 class ByteStream(AsyncByteStream, SyncByteStream):
@@ -173,8 +178,13 @@ def encode_html(html: str) -> tuple[dict[str, str], ByteStream]:
     return headers, ByteStream(body)
 
 
-def encode_json(json: Any) -> tuple[dict[str, str], ByteStream]:
-    body = json_dumps(json, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
+def encode_json(json: Any, json_serializer: JsonSerializer | None = None) -> tuple[dict[str, str], ByteStream]:
+    dumps = default_json_serializer if json_serializer is None else json_serializer
+    body = dumps(json)
+    if isinstance(body, str):
+        body = body.encode("utf-8")
+    elif not isinstance(body, bytes):
+        raise TypeError(f"JSON serializer returned unsupported type {type(body)!r}; expected str or bytes")
     content_length = str(len(body))
     content_type = "application/json"
     headers = {"Content-Length": content_length, "Content-Type": content_type}
@@ -186,6 +196,7 @@ def encode_request(
     data: RequestData | None = None,
     files: RequestFiles | None = None,
     json: Any | None = None,
+    json_serializer: JsonSerializer | None = None,
     boundary: bytes | None = None,
 ) -> tuple[dict[str, str], SyncByteStream | AsyncByteStream]:
     """
@@ -211,7 +222,7 @@ def encode_request(
     elif data:
         return encode_urlencoded_data(data)
     elif json is not None:
-        return encode_json(json)
+        return encode_json(json, json_serializer=json_serializer)
 
     return {}, ByteStream(b"")
 
@@ -221,6 +232,7 @@ def encode_response(
     text: str | None = None,
     html: str | None = None,
     json: Any | None = None,
+    json_serializer: JsonSerializer | None = None,
 ) -> tuple[dict[str, str], SyncByteStream | AsyncByteStream]:
     """
     Handles encoding the given `content`, returning a two-tuple of
@@ -233,6 +245,6 @@ def encode_response(
     elif html is not None:
         return encode_html(html)
     elif json is not None:
-        return encode_json(json)
+        return encode_json(json, json_serializer=json_serializer)
 
     return {}, ByteStream(b"")

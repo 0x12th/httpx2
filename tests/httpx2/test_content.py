@@ -181,6 +181,36 @@ async def test_json_content():
 
 
 @pytest.mark.anyio
+async def test_json_content_with_custom_serializer():
+    def dumps(data: typing.Any) -> bytes:
+        assert data == {"Hello": "world!"}
+        return b'{"Hello":"custom!"}'
+
+    request = httpx2.Request(method, url, json={"Hello": "world!"}, json_serializer=dumps)
+    assert isinstance(request.stream, typing.Iterable)
+    assert isinstance(request.stream, typing.AsyncIterable)
+
+    sync_content = b"".join(list(request.stream))
+    async_content = b"".join([part async for part in request.stream])
+
+    assert request.headers == {
+        "Host": "www.example.com",
+        "Content-Length": "19",
+        "Content-Type": "application/json",
+    }
+    assert sync_content == b'{"Hello":"custom!"}'
+    assert async_content == b'{"Hello":"custom!"}'
+
+
+def test_json_serializer_must_return_str_or_bytes():
+    def dumps(data: typing.Any) -> object:
+        return data
+
+    with pytest.raises(TypeError, match="JSON serializer returned unsupported type"):
+        httpx2.Request(method, url, json={"Hello": "world!"}, json_serializer=dumps)  # type: ignore[arg-type]
+
+
+@pytest.mark.anyio
 async def test_urlencoded_content():
     request = httpx2.Request(method, url, data={"Hello": "world!"})
     assert isinstance(request.stream, typing.Iterable)
@@ -500,6 +530,35 @@ def test_separators_for_compact_json():
         "separators=(',', ':') should produce a compact representation"
     )
     assert response.headers["Content-Type"] == "application/json"
+
+
+def test_response_json_with_custom_serializer():
+    def dumps(data: typing.Any) -> str:
+        assert data == {"Hello": "world!"}
+        return '{"Hello":"custom!"}'
+
+    response = httpx2.Response(200, json={"Hello": "world!"}, json_serializer=dumps)
+
+    assert response.content == b'{"Hello":"custom!"}'
+    assert response.headers["Content-Length"] == "19"
+    assert response.headers["Content-Type"] == "application/json"
+
+
+def test_response_json_with_custom_deserializer():
+    def loads(content: bytes | str) -> typing.Any:
+        assert content == b'{"Hello":"world!"}'
+        return {"Hello": "custom!"}
+
+    response = httpx2.Response(200, content=b'{"Hello":"world!"}', json_deserializer=loads)
+
+    assert response.json() == {"Hello": "custom!"}
+
+
+def test_custom_json_deserializer_rejects_loads_kwargs():
+    response = httpx2.Response(200, content=b'{"Hello":"world!"}', json_deserializer=lambda content: {})
+
+    with pytest.raises(TypeError, match="keyword arguments are only supported"):
+        response.json(parse_float=float)
 
 
 def test_allow_nan_false():

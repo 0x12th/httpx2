@@ -68,6 +68,36 @@ async def test_post_json(server):
 
 
 @pytest.mark.anyio
+async def test_async_client_json_serializer():
+    def echo_body(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=request.content)
+
+    def dumps(data: typing.Any) -> bytes:
+        assert data == {"text": "Hello, world!"}
+        return b'{"text":"custom!"}'
+
+    async with httpx2.AsyncClient(transport=httpx2.MockTransport(echo_body), json_serializer=dumps) as client:
+        response = await client.post("https://example.org", json={"text": "Hello, world!"})
+
+    assert response.content == b'{"text":"custom!"}'
+
+
+@pytest.mark.anyio
+async def test_async_client_json_deserializer():
+    def json_response(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=b'{"text":"Hello, world!"}')
+
+    def loads(content: bytes | str) -> typing.Any:
+        assert content == b'{"text":"Hello, world!"}'
+        return {"text": "custom!"}
+
+    async with httpx2.AsyncClient(transport=httpx2.MockTransport(json_response), json_deserializer=loads) as client:
+        response = await client.get("https://example.org")
+
+    assert response.json() == {"text": "custom!"}
+
+
+@pytest.mark.anyio
 async def test_stream_response(server):
     async with httpx2.AsyncClient() as client:
         async with client.stream("GET", server.url) as response:

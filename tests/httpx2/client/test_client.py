@@ -89,6 +89,121 @@ def test_post_json(server):
     assert response.reason_phrase == "OK"
 
 
+def test_client_json_serializer():
+    def echo_body(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=request.content)
+
+    def dumps(data: typing.Any) -> bytes:
+        assert data == {"text": "Hello, world!"}
+        return b'{"text":"custom!"}'
+
+    with httpx2.Client(transport=httpx2.MockTransport(echo_body), json_serializer=dumps) as client:
+        response = client.post("https://example.org", json={"text": "Hello, world!"})
+
+    assert response.content == b'{"text":"custom!"}'
+
+
+def test_request_json_serializer_overrides_client_default():
+    def echo_body(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=request.content)
+
+    def client_dumps(data: typing.Any) -> bytes:
+        raise AssertionError("client_dumps should NOT be called")  # pragma: no cover
+
+    def request_dumps(data: typing.Any) -> bytes:
+        return b'{"source":"request"}'
+
+    with httpx2.Client(
+        transport=httpx2.MockTransport(echo_body),
+        json_serializer=client_dumps,
+    ) as client:
+        response = client.post(
+            "https://example.org",
+            json={"text": "Hello, world!"},
+            json_serializer=request_dumps,
+        )
+
+    assert response.content == b'{"source":"request"}'
+
+
+def test_request_json_serializer_can_use_builtin_default():
+    def echo_body(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=request.content)
+
+    def client_dumps(data: typing.Any) -> bytes:
+        raise AssertionError("client_dumps should NOT be called")  # pragma: no cover
+
+    with httpx2.Client(
+        transport=httpx2.MockTransport(echo_body),
+        json_serializer=client_dumps,
+    ) as client:
+        response = client.post(
+            "https://example.org",
+            json={"text": "Hello, world!"},
+            json_serializer=None,
+        )
+
+    assert response.content == b'{"text":"Hello, world!"}'
+
+
+def test_client_json_deserializer():
+    def json_response(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=b'{"text":"Hello, world!"}')
+
+    def loads(content: bytes | str) -> typing.Any:
+        assert content == b'{"text":"Hello, world!"}'
+        return {"text": "custom!"}
+
+    with httpx2.Client(
+        transport=httpx2.MockTransport(json_response),
+        json_deserializer=loads,
+    ) as client:
+        response = client.get("https://example.org")
+
+    assert response.json() == {"text": "custom!"}
+
+
+def test_request_json_deserializer_overrides_client_default():
+    def json_response(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=b'{"text":"Hello, world!"}')
+
+    def client_loads(content: bytes | str) -> typing.Any:
+        raise AssertionError("client_loads should NOT be called")  # pragma: no cover
+
+    def request_loads(content: bytes | str) -> typing.Any:
+        return {"source": "request"}
+
+    with httpx2.Client(
+        transport=httpx2.MockTransport(json_response),
+        json_deserializer=client_loads,
+    ) as client:
+        response = client.get(
+            "https://example.org",
+            json_deserializer=request_loads,
+        )
+
+    assert response.json() == {"source": "request"}
+
+
+def test_request_json_deserializer_can_use_builtin_default():
+    def json_response(request: httpx2.Request) -> httpx2.Response:
+        return httpx2.Response(200, content=b'{"text":"Hello, world!"}')
+
+    def client_loads(content: bytes | str) -> typing.Any:
+        raise AssertionError("client_loads should NOT be called")  # pragma: no cover
+
+    with httpx2.Client(
+        transport=httpx2.MockTransport(json_response),
+        json_deserializer=client_loads,
+    ) as client:
+        response = client.get(
+            "https://example.org",
+            json_deserializer=None,
+        )
+
+    assert response.json() == {"text": "Hello, world!"}
+
+
 def test_stream_response(server):
     with httpx2.Client() as client:
         with client.stream("GET", server.url) as response:

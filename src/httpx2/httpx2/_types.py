@@ -70,6 +70,8 @@ ResponseContent = Union[str, bytes, Iterable[bytes], AsyncIterable[bytes]]
 ResponseExtensions = Mapping[str, Any]
 
 RequestData = Mapping[str, Any]
+JsonSerializer = Callable[[Any], Union[str, bytes]]
+JsonDeserializer = Callable[[Union[bytes, str]], Any]
 
 FileContent = Union[IO[bytes], bytes, str]
 FileTypes = Union[

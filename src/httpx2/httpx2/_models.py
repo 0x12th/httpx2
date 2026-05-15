@@ -36,6 +36,8 @@ from ._types import (
     AsyncByteStream,
     CookieTypes,
     HeaderTypes,
+    JsonDeserializer,
+    JsonSerializer,
     QueryParamTypes,
     RequestContent,
     RequestData,
@@ -381,6 +383,7 @@ class Request:
         data: RequestData | None = None,
         files: RequestFiles | None = None,
         json: typing.Any | None = None,
+        json_serializer: JsonSerializer | None = None,
         stream: SyncByteStream | AsyncByteStream | None = None,
         extensions: RequestExtensions | None = None,
     ) -> None:
@@ -399,6 +402,7 @@ class Request:
                 data=data,
                 files=files,
                 json=json,
+                json_serializer=json_serializer,
                 boundary=get_multipart_boundary_from_content_type(
                     content_type=content_type.encode(self.headers.encoding) if content_type else None
                 ),
@@ -503,6 +507,8 @@ class Response:
         text: str | None = None,
         html: str | None = None,
         json: typing.Any = None,
+        json_serializer: JsonSerializer | None = None,
+        json_deserializer: JsonDeserializer | None = None,
         stream: SyncByteStream | AsyncByteStream | None = None,
         request: Request | None = None,
         extensions: ResponseExtensions | None = None,
@@ -513,6 +519,7 @@ class Response:
         self.headers = Headers(headers)
 
         self._request: Request | None = request
+        self._json_deserializer = json_deserializer
 
         # When follow_redirects=False and a redirect is received,
         # the client will set `response.next_request`.
@@ -527,7 +534,7 @@ class Response:
         self.default_encoding = default_encoding
 
         if stream is None:
-            headers, stream = encode_response(content, text, html, json)
+            headers, stream = encode_response(content, text, html, json, json_serializer=json_serializer)
             self._prepare(headers)
             self.stream = stream
             if isinstance(stream, ByteStream):
@@ -802,6 +809,10 @@ class Response:
         raise HTTPStatusError(message, request=request, response=self)
 
     def json(self, **kwargs: typing.Any) -> typing.Any:
+        if self._json_deserializer is not None:
+            if kwargs:
+                raise TypeError("Response.json() keyword arguments are only supported with the default JSON decoder")
+            return self._json_deserializer(self.content)
         return jsonlib.loads(self.content, **kwargs)
 
     @property
